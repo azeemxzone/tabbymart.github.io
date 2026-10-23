@@ -8,29 +8,30 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f4f6f8; color: #333; }
     
-    header { background: #1e293b; color: white; padding: 20px; text-align: center; }
-    header h1 { font-size: 1.8rem; letter-spacing: 1px; }
-    header p { color: #94a3b8; font-size: 0.9rem; margin-top: 5px; }
+    header { background: #1e293b; color: white; padding: 25px 20px; text-align: center; }
+    header h1 { font-size: 2rem; letter-spacing: 1px; }
+    header p { color: #94a3b8; font-size: 0.95rem; margin-top: 6px; }
 
     .container { max-width: 1200px; margin: 30px auto; padding: 0 15px; }
-
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
     
     .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s; }
     .card:hover { transform: translateY(-3px); }
-    .card img { max-width: 100%; height: 200px; object-fit: contain; border-radius: 8px; }
-    .card h3 { font-size: 1.1rem; margin: 15px 0 10px; color: #0f172a; }
+    .card img.prod-img { max-width: 100%; height: 200px; object-fit: contain; border-radius: 8px; margin-bottom: 10px; }
+    .card h3 { font-size: 1.1rem; margin: 10px 0; color: #0f172a; }
     .card .category { display: inline-block; background: #e2e8f0; color: #475569; font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; margin-bottom: 15px; }
 
     .buy-links { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; color: white; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; color: white; }
     .btn-amazon { background-color: #ff9900; color: #111; }
     .btn-flipkart { background-color: #2874f0; }
     .btn-meesho { background-color: #e91e63; }
 
-    .qr-container { margin-top: 15px; padding-top: 15px; border-top: 1fr solid #f1f5f9; }
-    .qr-container p { font-size: 0.75rem; color: #64748b; margin-bottom: 5px; }
+    .qr-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+    .qr-container p { font-size: 0.75rem; color: #64748b; margin-bottom: 6px; }
     .qr-container img { width: 100px; height: 100px; }
+    
+    #loading { text-align: center; font-size: 1.1rem; color: #64748b; margin-top: 40px; }
   </style>
 </head>
 <body>
@@ -41,26 +42,65 @@
   </header>
 
   <div class="container">
-    <div class="grid" id="productGrid">
-      <!-- Demo Product Card -->
-      <div class="card">
-        <img src="https://via.placeholder.com/300" alt="Product Image">
-        <h3>Facial Hair Epilator</h3>
-        <span class="category">Personal Care</span>
-        
-        <div class="buy-links">
-          <a href="https://www.amazon.in" target="_blank" class="btn btn-amazon">Buy on Amazon</a>
-          <a href="https://www.flipkart.com" target="_blank" class="btn btn-flipkart">Buy on Flipkart</a>
-          <a href="https://www.meesho.com" target="_blank" class="btn btn-meesho">Buy on Meesho</a>
-        </div>
-
-        <div class="qr-container">
-          <p>Scan to buy on Amazon</p>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://www.amazon.in" alt="QR Code">
-        </div>
-      </div>
-    </div>
+    <div id="loading">Loading catalog...</div>
+    <div class="grid" id="productGrid"></div>
   </div>
 
+  <script>
+    // REPLACE THIS URL WITH YOUR PUBLISHED CSV URL FROM STEP 2
+    const SHEET_CSV_URL = "YOUR_PUBLISHED_CSV_URL_HERE";
+
+    async function loadProducts() {
+      try {
+        const response = await fetch(SHEET_CSV_URL);
+        const data = await response.text();
+        const rows = data.split('\n').map(row => row.split(','));
+        
+        const grid = document.getElementById('productGrid');
+        document.getElementById('loading').style.display = 'none';
+
+        // Skip row 0 (headers)
+        for (let i = 1; i < rows.length; i++) {
+          const [id, title, category, image_url, amazon_url, flipkart_url, meesho_url] = rows[i];
+          if (!title) continue;
+
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          const defaultImg = "https://via.placeholder.com/300?text=No+Image";
+          const imgSrc = (image_url && image_url.trim().startsWith("http")) ? image_url.trim() : defaultImg;
+          const amzUrl = (amazon_url && amazon_url.trim().startsWith("http")) ? amazon_url.trim() : "#";
+          const fkUrl = (flipkart_url && flipkart_url.trim().startsWith("http")) ? flipkart_url.trim() : "#";
+          const mshUrl = (meesho_url && meesho_url.trim().startsWith("http")) ? meesho_url.trim() : "#";
+
+          card.innerHTML = `
+            <img src="${imgSrc}" alt="${title}" class="prod-img">
+            <h3>${title.trim()}</h3>
+            <span class="category">${category ? category.trim() : 'General'}</span>
+            
+            <div class="buy-links">
+              ${amzUrl !== "#" ? `<a href="${amzUrl}" target="_blank" class="btn btn-amazon">Buy on Amazon</a>` : ''}
+              ${fkUrl !== "#" ? `<a href="${fkUrl}" target="_blank" class="btn btn-flipkart">Buy on Flipkart</a>` : ''}
+              ${mshUrl !== "#" ? `<a href="${mshUrl}" target="_blank" class="btn btn-meesho">Buy on Meesho</a>` : ''}
+            </div>
+
+            ${amzUrl !== "#" ? `
+              <div class="qr-container">
+                <p>Scan to buy on Amazon</p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(amzUrl)}" alt="QR Code">
+              </div>
+            ` : ''}
+          `;
+
+          grid.appendChild(card);
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading').innerText = "Failed to load products. Check CSV link.";
+      }
+    }
+
+    loadProducts();
+  </script>
 </body>
 </html>
